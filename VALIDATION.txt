@@ -1,0 +1,33 @@
+Plan to-dos: local validation notes (yulan_pdf)
+
+1) AppleScript (validate-applescript)
+- Preview.app declares NSAppleScriptEnabled = true in Info.plist.
+- Strings in the Preview binary include currentPage / currentPageIndex (internal; script surface may differ).
+- Automated osascript from this environment can block waiting for Automation permission; run locally:
+    osascript scripts/preview_front_document_info.applescript
+- scripts/preview_front_document_info.applescript returns path + current page, or an error line if "current page" is unavailable on your OS build.
+
+2) Accessibility (validate-ax)
+- GUI "Accessibility Inspector" (Xcode > Open Developer Tool) remains the manual gold standard.
+- Programmatic helper: build then run with Preview frontmost:
+    .build/release/preview_ax_dump
+    .build/release/preview_ax_dump --any
+  Grant Accessibility to the terminal host (Terminal/iTerm/Cursor) when macOS prompts.
+  The tool tries the focused window, then the main window; error -25211 means Accessibility is off or denied.
+- Inspect printed lines for role/title/value that contain page numbers; UI changes between macOS versions.
+
+3) Trigger prototype (pick-trigger)
+- Hammerspoon: run once from repo: zsh scripts/setup-hammerspoon.zsh
+  (installs ~/.local/bin/pdfpageexport and appends dofile(...) to ~/.hammerspoon/init.lua).
+- Config file: hammerspoon/yulan_pdf_export.lua — ⌃⌥⌘E while Preview is front.
+- If Hammerspoon does not appear under System Settings > Privacy > Automation: press ⌃⌥⌘R once (registers the app with TCC). Keep Hammerspoon in /Applications, not running from the disk image.
+- Chinese macOS: AppleScript cannot compile English phrases like "current page" (-2741). The Hammerspoon config uses JXA for the file path and Accessibility (AX) or a dialog for the page number; enable Accessibility for Hammerspoon if you want auto page detection.
+- Manual CLI install only: zsh scripts/install-cli.sh
+
+4) Export backend (backend-cli)
+- pdfpageexport: Swift PDFKit CLI. Example:
+    .build/release/pdfpageexport --pdf file.pdf --page 1 --dpi 144 --out page1.png
+  JPEG: use .jpg and optional --jpeg-quality 0.85
+
+Build: swift build -c release
+Binaries: .build/release/pdfpageexport, .build/release/preview_ax_dump
