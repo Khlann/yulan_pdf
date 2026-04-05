@@ -71,6 +71,23 @@ local function parsePageNumberFromAXString(s)
   return nil, false
 end
 
+-- 预览窗口标题含「… — 页码：26/111」，比 AX 里幻灯片页脚的「2 / 111」可靠，必须优先解析
+local function previewPageFromWindowTitle(win)
+  if not win then
+    return nil
+  end
+  local t = win:title()
+  if type(t) ~= "string" or t == "" then
+    return nil
+  end
+  local n =
+    t:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+    or t:match("[页頁]%s*[码碼]%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+    or t:match("页码%s*(%d+)%s*[/／]%s*%d+")
+    or t:lower():match("page%s+(%d+)%s+of%s+%d+")
+  return n and tonumber(n) or nil
+end
+
 -- 始终用「预览」进程的窗口做 AX（不要用全局 focusedWindow：在 Hammerspoon 控制台里焦点是控制台）
 local function previewAppWindowForAX()
   local prev = hs.application.get("com.apple.Preview")
@@ -277,7 +294,7 @@ local function exportPreviewPage()
   end
 
   local win = previewAppWindowForAX()
-  local page = previewCurrentPageFromAX(win)
+  local page = previewPageFromWindowTitle(win) or previewCurrentPageFromAX(win)
 
   if not page then
     local btn, text = hs.dialog.textPrompt(

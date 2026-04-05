@@ -23,6 +23,7 @@ Plan to-dos: local validation notes (yulan_pdf)
 - If Hammerspoon does not appear under System Settings > Privacy > Automation: press ⌃⌥⌘R once (registers the app with TCC). Keep Hammerspoon in /Applications, not running from the disk image.
 - Chinese macOS: AppleScript cannot compile English phrases like "current page" (-2741). The Hammerspoon config uses JXA for the file path and Accessibility (AX) or a dialog for the page number; enable Accessibility for Hammerspoon if you want auto page detection.
 - Debug AX from Hammerspoon Console: do NOT use hs.window.focusedWindow() (focus is the console). Use: local w = hs.application.get("com.apple.Preview"):focusedWindow() or hs.application.get("com.apple.Preview"):mainWindow(); hs.axuielement.windowElement(w)
+- Page number: Hammerspoon prefers parsing the Preview window title (e.g. "页码：26/111") before AX, so Beamer footers like "2 / 111" on the canvas are not mistaken for the current page.
 - Manual CLI install only: zsh scripts/install-cli.sh
 
 4) Export backend (backend-cli)
