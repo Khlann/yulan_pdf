@@ -42,23 +42,30 @@ function run() {
   return hs.osascript.javascript(js)
 end
 
--- 只信任「当前页/总页数」类文案，避免侧栏缩略图上的「1」「第1页」先被 DFS 命中。
-local function parsePageIndicatorStrict(s)
-  if type(s) ~= "string" then
-    return nil
+-- 解析页码；第二返回值为 true 表示来自「页码：n/m」类控件（预览左上角中文工具栏）
+local function parsePageNumberFromAXString(s)
+  if type(s) ~= "string" or s == "" then
+    return nil, false
+  end
+  local n = s:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+  if n then
+    return tonumber(n), true
   end
   local t = s:match("^%s*(.-)%s*$")
   if not t or t == "" then
-    return nil
+    return nil, false
   end
-  local n =
+  n =
     t:match("^%s*(%d+)%s*[/／]%s*%d+%s*$")
     or t:match("^%s*(%d+)%s*-%s*%d+%s*$")
     or t:match("^%s*(%d+)%s*–%s*%d+%s*$")
     or t:match("^%s*(%d+)%s*—%s*%d+%s*$")
     or t:lower():match("^%s*page%s+(%d+)%s+of%s+%d+%s*$")
     or t:match("^%s*(%d+)%s+of%s+%d+%s*$")
-  return n and tonumber(n) or nil
+  if n then
+    return tonumber(n), false
+  end
+  return nil, false
 end
 
 local function axElementFrameLeft(el)
@@ -88,9 +95,14 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
   for _, key in ipairs(fields) do
     local v = el:attributeValue(key)
     if type(v) == "string" and #v > 0 then
-      local pg = parsePageIndicatorStrict(v)
+      local pg, labeled = parsePageNumberFromAXString(v)
       if pg then
-        out[#out + 1] = { page = pg, x = axElementFrameLeft(el), area = axElementFrameArea(el) }
+        out[#out + 1] = {
+          page = pg,
+          x = axElementFrameLeft(el),
+          area = axElementFrameArea(el),
+          labeled = labeled,
+        }
       end
     end
   end
@@ -102,7 +114,9 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
   end
 end
 
--- 从预览窗口无障碍树猜当前页：多候选时优先最靠右（工具栏「n / m」通常在右上）
+-- 从预览窗口无障碍树猜当前页：
+-- - 含「页码：n/m」的控件（常见在左上角）优先，且其中取 x 最小（最靠左）
+-- - 否则退回英文「n / m」等，取 x 最大（右上）
 local function previewCurrentPageFromAX(win)
   if not win then
     return nil
@@ -119,6 +133,15 @@ local function previewCurrentPageFromAX(win)
     return nil
   end
   table.sort(cands, function(a, b)
+    if a.labeled ~= b.labeled then
+      return a.labeled
+    end
+    if a.labeled and b.labeled then
+      if a.x ~= b.x then
+        return a.x < b.x
+      end
+      return a.area < b.area
+    end
     if a.x ~= b.x then
       return a.x > b.x
     end

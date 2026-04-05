@@ -167,31 +167,15 @@ enum Main {
     }
 
     private static func renderPage(_ page: PDFPage, pixelWidth: Int, pixelHeight: Int) -> CGImage? {
-        let mediaBox = page.bounds(for: .mediaBox)
-        guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
-        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-        guard let ctx = CGContext(
-            data: nil,
-            width: pixelWidth,
-            height: pixelHeight,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: colorSpace,
-            bitmapInfo: bitmapInfo
-        ) else { return nil }
-
-        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight)))
-
-        // PDF origin is bottom-left; bitmap is top-left. Use device-space flip then fit media box.
-        let sx = CGFloat(pixelWidth) / mediaBox.width
-        let sy = CGFloat(pixelHeight) / mediaBox.height
-        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
-        ctx.scaleBy(x: 1, y: -1)
-        ctx.scaleBy(x: sx, y: sy)
-        ctx.translateBy(x: -mediaBox.origin.x, y: -mediaBox.origin.y)
-
-        page.draw(with: .mediaBox, to: ctx)
-        return ctx.makeImage()
+        // Use PDFKit’s thumbnail rasterization so orientation matches Preview (handles Y-flip & rotation).
+        let size = NSSize(width: CGFloat(pixelWidth), height: CGFloat(pixelHeight))
+        let image = page.thumbnail(of: size, for: .mediaBox)
+        guard let tiff = image.tiffRepresentation,
+              let rep = NSBitmapImageRep(data: tiff),
+              let cgImage = rep.cgImage
+        else {
+            return nil
+        }
+        return cgImage
     }
 }
