@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **Services**：`install-preview-service.zsh` 安装 `YulanCopyPreviewPage.workflow`：`AMAccepts`/`AMProvides` 为 `*`（避免预览 PDF 选区非纯文本导致「服务输入出现问题」），`NSSendTypes` 含 RTF；stdin 经 `cat` 丢弃后 `exec` 导出脚本；预览内需先划选文字再出服务菜单。
+- **Services**：`install-preview-service.zsh` 安装 `YulanCopyPreviewPage.workflow`：脚本复制到 `Contents/Resources/` 再 `exec`（避免沙盒无法读「文稿」路径）；`AMAccepts`/`Provides` 为 `*`；`NSSendTypes` 含 RTF；预览内需先划选文字再出服务菜单。
 - **Services**：`copy_preview_page_to_clipboard.sh` 通过 JXA 读取窗口标题，与 `parse_preview_title.py` 自动解析页码（与 Hammerspoon 规则一致）；无法解析时再弹窗输入。
 
 ## [0.1.0] — 2026-04-05

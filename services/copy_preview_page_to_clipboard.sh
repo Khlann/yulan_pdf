@@ -10,8 +10,9 @@ resolve_tool() {
   fi
   local h="${HOME}"
   local c1="${h}/.local/bin/pdfpageexport"
-  local here="${0:A:h:h}"
-  local c2="${here}/.build/release/pdfpageexport"
+  # 脚本在仓库 services/ 时，.. 为仓库根；在 workflow/Contents/Resources/ 时此路径不存在
+  local repo_root="${0:A:h:h}"
+  local c2="${repo_root}/.build/release/pdfpageexport"
   if [[ -x "${c1}" ]]; then echo "${c1}"; return 0; fi
   if [[ -x "${c2}" ]]; then echo "${c2}"; return 0; fi
   return 1

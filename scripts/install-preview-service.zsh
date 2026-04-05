@@ -19,12 +19,19 @@ DEST_DIR="${HOME}/Library/Services"
 WF_NAME="YulanCopyPreviewPage.workflow"
 DEST="${DEST_DIR}/${WF_NAME}"
 rm -rf "${DEST}" "${DEST_DIR}/页览 复制预览当前页.workflow"
-mkdir -p "${DEST}/Contents"
+mkdir -p "${DEST}/Contents/Resources"
+
+# 服务在沙盒中通常无法读 ~/Documents 下仓库；把脚本打进 workflow 包内再 exec
+cp -f "${SH_PATH}" "${DEST}/Contents/Resources/copy_preview_page_to_clipboard.sh"
+cp -f "${PY_PARSER}" "${DEST}/Contents/Resources/parse_preview_title.py"
+chmod +x "${DEST}/Contents/Resources/copy_preview_page_to_clipboard.sh"
+
+BUNDLE_SH="${DEST}/Contents/Resources/copy_preview_page_to_clipboard.sh"
 
 DOC_OUT="${DEST}/Contents/document.wflow"
 INFO_OUT="${DEST}/Contents/Info.plist"
 
-/usr/bin/python3 - "$SH_PATH" "$DOC_OUT" "$INFO_OUT" "$REPO_ROOT" <<'PY'
+/usr/bin/python3 - "$BUNDLE_SH" "$DOC_OUT" "$INFO_OUT" "$REPO_ROOT" <<'PY'
 import plistlib
 import shlex
 import sys
@@ -95,7 +102,7 @@ info = {
     "CFBundleIdentifier": "io.github.khlann.yulan.copyPreviewPage",
     "CFBundleName": "YulanCopyPreviewPage",
     "CFBundlePackageType": "BNDL",
-    "CFBundleShortVersionString": "1.0.1",
+    "CFBundleShortVersionString": "1.0.2",
     "NSServices": [
         {
             "NSMenuItem": {"default": "页览：复制当前页为 PNG"},

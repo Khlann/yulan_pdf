@@ -37,6 +37,10 @@ B) 手动用「自动操作」装配时：
      请保留同目录下的 parse_preview_title.py（服务脚本会调用它）。
      不要只复制 .sh 正文到 Automator，否则找不到解析器。
 
+   若使用 install-preview-service.zsh：脚本会复制到
+   ~/Library/Services/YulanCopyPreviewPage.workflow/Contents/Resources/
+   （避免 Automator 沙盒无法读取「文稿」里的仓库路径）。
+
 3) Save as e.g. "Copy Preview Page as PNG".
 
 4) System Settings → Keyboard → Keyboard Shortcuts → Services (or Quick Actions):
