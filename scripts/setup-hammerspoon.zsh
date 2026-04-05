@@ -3,7 +3,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 "${REPO_ROOT}/scripts/install-cli.sh"
 HS_INIT="${HOME}/.hammerspoon/init.lua"
-MARKER="-- yulan_pdf export (auto-added)"
+MARKER="-- 页览 Yulan export (auto-added)"
 LOADER="dofile([["${REPO_ROOT}/hammerspoon/yulan_pdf_export.lua"]])"
 mkdir -p "${HOME}/.hammerspoon"
 touch "${HS_INIT}"

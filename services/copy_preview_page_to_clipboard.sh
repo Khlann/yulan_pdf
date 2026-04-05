@@ -14,7 +14,7 @@ resolve_tool() {
 }
 
 TOOL="$(resolve_tool)" || {
-  osascript -e 'display alert "pdfpageexport not found" message "Run: zsh scripts/install-cli.sh in the yulan_pdf repo." as critical' >/dev/null 2>&1 || true
+  osascript -e 'display alert "pdfpageexport not found" message "Run: zsh scripts/install-cli.sh in the 页览 (yulan_pdf) repo." as critical' >/dev/null 2>&1 || true
   exit 1
 }
 
@@ -53,4 +53,4 @@ if ! "${TOOL}" --pdf "${PDFPATH}" --page "${PAGE}" --dpi 144 --clipboard; then
   exit 1
 fi
 
-osascript -e 'display notification "Current PDF page copied to clipboard as PNG" with title "yulan_pdf"' >/dev/null 2>&1 || true
+osascript -e 'display notification "Current PDF page copied to clipboard as PNG" with title "页览 Yulan"' >/dev/null 2>&1 || true

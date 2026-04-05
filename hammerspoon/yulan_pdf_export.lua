@@ -1,4 +1,4 @@
--- yulan_pdf: copy current Preview PDF page as PNG to clipboard (⌃⌥⌘E).
+-- 页览 Yulan: copy current Preview PDF page as PNG to clipboard (⌃⌥⌘E).
 -- 简体中文系统下 AppleScript 无法编译「current page」等英文连续标识符（-2741），
 -- 因此：路径用 JXA；页码优先从辅助功能树解析，失败则弹窗让你输入。
 
@@ -15,10 +15,13 @@ local function openAutomationPrivacyPane()
 end
 
 local function findPdfpageexport()
+  local envPath = os.getenv("YULAN_PDFPAGEEXPORT")
+  if type(envPath) == "string" and envPath ~= "" and hs.fs.attributes(envPath, "mode") == "file" then
+    return envPath
+  end
   local home = os.getenv("HOME") or ""
   local candidates = {
     home .. "/.local/bin/pdfpageexport",
-    home .. "/Documents/code/sideproject/yulan_pdf/.build/release/pdfpageexport",
   }
   for _, p in ipairs(candidates) do
     if hs.fs.attributes(p, "mode") == "file" then
@@ -344,7 +347,7 @@ local function exportPreviewPage()
 
   if not page then
     local btn, text = hs.dialog.textPrompt(
-      "yulan_pdf",
+      "页览",
       "未从界面自动识别页码（需辅助功能权限，或页码不在工具栏）。请输入当前页（数字）：",
       "1",
       "复制",
@@ -396,4 +399,4 @@ hs.hotkey.bind({ "ctrl", "alt", "cmd" }, "E", function()
   exportPreviewPage()
 end)
 
-hs.alert.show("yulan_pdf：⌃⌥⌘E 复制当前页 PNG 到剪贴板；⌃⌥⌘R 测自动化。右键菜单见 services/README.txt", 3.5)
+hs.alert.show("页览：⌃⌥⌘E 复制当前页 PNG 到剪贴板；⌃⌥⌘R 测自动化。右键菜单见 services/README.txt", 3.5)

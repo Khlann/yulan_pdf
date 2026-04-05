@@ -1,4 +1,4 @@
-Plan to-dos: local validation notes (yulan_pdf)
+页览 (Yulan) — local validation notes (repo: yulan_pdf)
 
 1) AppleScript (validate-applescript)
 - Preview.app declares NSAppleScriptEnabled = true in Info.plist.

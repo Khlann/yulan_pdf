@@ -1,3 +1,5 @@
+页览 (Yulan) — Quick Action / Service for Preview (see repo README for full setup).
+
 Right-click menu (macOS): Preview does not allow third-party items on the canvas menu. The supported approach is a Quick Action / Service, which appears as:
 
   Right-click → Quick Actions → «your action»
