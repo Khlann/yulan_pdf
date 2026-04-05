@@ -77,10 +77,13 @@ local function extractPageFromTitleLikeString(t)
     return nil
   end
   local tl = t:lower()
+  -- 标题形如 "file.pdf – 页码：7/74"（– 为 en dash）；冒号也可能是其它 Unicode 冒号类字符
   local n =
-    t:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
-    or t:match("[页頁]%s*[码碼]%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+    t:match("页码%s*[:：∶]%s*(%d+)%s*[/／]%s*%d+")
+    or t:match("[页頁]%s*[码碼]%s*[:：∶]%s*(%d+)%s*[/／]%s*%d+")
     or t:match("页码%s*(%d+)%s*[/／]%s*%d+")
+    -- 宽松：页码与数字之间允许任意「非 ASCII 数字」前缀（兼容异常空格/标点）
+    or t:match("页码[^%d]*(%d+)%s*[/／]%s*%d+")
     or tl:match("page%s+(%d+)%s+of%s+%d+")
     or tl:match("[–—%-]%s*page%s+(%d+)%s+of%s+%d+")
   return n and tonumber(n) or nil
