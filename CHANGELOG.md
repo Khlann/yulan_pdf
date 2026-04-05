@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **Services**：`install-preview-service.zsh` 自动生成并安装 `~/Library/Services/页览 复制预览当前页.workflow`（内嵌仓库内 `copy_preview_page_to_clipboard.sh` 绝对路径）。
 - **Services**：`copy_preview_page_to_clipboard.sh` 通过 JXA 读取窗口标题，与 `parse_preview_title.py` 自动解析页码（与 Hammerspoon 规则一致）；无法解析时再弹窗输入。
 
 ## [0.1.0] — 2026-04-05

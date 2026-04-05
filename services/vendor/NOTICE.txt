@@ -1,0 +1,2 @@
+automator_run_shell_base.wflow 衍生自开源模板（仅保留「运行 Shell 脚本」动作结构）：
+https://github.com/sparanoid/automator-workflows （Compress Images.workflow / document.wflow）

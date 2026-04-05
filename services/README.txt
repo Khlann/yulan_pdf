@@ -9,6 +9,16 @@ Right-click menu (macOS): Preview does not allow third-party items on the canvas
 
 Setup (once):
 
+A) 自动安装（推荐，无需手点「自动操作」）：
+
+     cd /path/to/yulan_pdf && zsh scripts/install-preview-service.zsh
+
+   会：编译安装 pdfpageexport，并把服务装到
+   ~/Library/Services/页览 复制预览当前页.workflow
+   然后到「系统设置 → 键盘 → 键盘快捷键 → 服务」里勾选「页览：复制当前页为 PNG」。
+
+B) 手动用「自动操作」装配时：
+
 1) Build & install the CLI:
      cd /path/to/yulan_pdf && zsh scripts/install-cli.sh
 

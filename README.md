@@ -43,7 +43,15 @@ JPEG：输出 `.jpg` 并可选 `--jpeg-quality 0.85`。
 
 ### 右键 / 服务
 
-预览没有在画布上挂第三方菜单的官方接口；可用 **Automator 快速操作**，在 **服务** 子菜单中出现。服务会通过 JXA 读前台窗口标题并**尽量自动识别当前页**（与标题栏「页码：n/m」一致），失败时再弹窗询问。步骤与文件要求见 [`services/README.txt`](services/README.txt)。
+预览没有在画布上挂第三方菜单的官方接口；可用 **Automator 快速操作**，在 **服务** 子菜单中出现。服务会通过 JXA 读前台窗口标题并**尽量自动识别当前页**（与标题栏「页码：n/m」一致），失败时再弹窗询问。
+
+**一键安装服务**（会编译 CLI 并写入 `~/Library/Services/`）：
+
+```bash
+zsh scripts/install-preview-service.zsh
+```
+
+装好后在 **系统设置 → 键盘 → 键盘快捷键 → 服务** 中勾选 **「页览：复制当前页为 PNG」**。手动用「自动操作」装配的步骤见 [`services/README.txt`](services/README.txt)。
 
 ## 仓库与版本
 
