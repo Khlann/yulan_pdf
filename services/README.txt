@@ -14,8 +14,12 @@ A) 自动安装（推荐，无需手点「自动操作」）：
      cd /path/to/yulan_pdf && zsh scripts/install-preview-service.zsh
 
    会：编译安装 pdfpageexport，并把服务装到
-   ~/Library/Services/页览 复制预览当前页.workflow
-   然后到「系统设置 → 键盘 → 键盘快捷键 → 服务」里勾选「页览：复制当前页为 PNG」。
+   ~/Library/Services/YulanCopyPreviewPage.workflow
+   然后到「系统设置 → 键盘 → 键盘快捷键 → 服务（或快速操作）」里勾选「页览：复制当前页为 PNG」。
+   若列表里没有，再到「系统设置 → 隐私与安全性 → 扩展 → 快速操作」查看。
+
+   说明：为让系统注册该服务，工作流按「文本」类声明（与 Finder 自带服务同理）。
+   在预览中请先划选少量文字，再右键 → 服务；导出内容仍是整页 PNG，与选中文字无关。
 
 B) 手动用「自动操作」装配时：
 

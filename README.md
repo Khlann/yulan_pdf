@@ -51,7 +51,8 @@ JPEG：输出 `.jpg` 并可选 `--jpeg-quality 0.85`。
 zsh scripts/install-preview-service.zsh
 ```
 
-装好后在 **系统设置 → 键盘 → 键盘快捷键 → 服务** 中勾选 **「页览：复制当前页为 PNG」**。手动用「自动操作」装配的步骤见 [`services/README.txt`](services/README.txt)。
+装好后在 **系统设置 → 键盘 → 键盘快捷键 → 服务（或快速操作）** 中勾选 **「页览：复制当前页为 PNG」**；若没有，再到 **系统设置 → 隐私与安全性 → 扩展 → 快速操作** 查看。  
+在预览里需 **先划选少量文字** 再右键 → 服务（系统按「文本类」注册才可见；导出的仍是整页）。手动装配步骤见 [`services/README.txt`](services/README.txt)。
 
 ## 仓库与版本
 

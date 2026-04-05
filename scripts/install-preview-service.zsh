@@ -15,8 +15,10 @@ echo "Building pdfpageexport…"
 "${REPO_ROOT}/scripts/install-cli.sh"
 
 DEST_DIR="${HOME}/Library/Services"
-WF_NAME="页览 复制预览当前页.workflow"
+# ASCII 包名，避免部分系统组件对中文路径注册异常；菜单标题仍由 Info.plist 决定为中文
+WF_NAME="YulanCopyPreviewPage.workflow"
 DEST="${DEST_DIR}/${WF_NAME}"
+rm -rf "${DEST}" "${DEST_DIR}/页览 复制预览当前页.workflow"
 mkdir -p "${DEST}/Contents"
 
 DOC_OUT="${DEST}/Contents/document.wflow"
@@ -65,7 +67,7 @@ doc = {
     "workflowMetaData": {
         "serviceApplicationBundleID": "com.apple.Preview",
         "serviceApplicationPath": "/System/Applications/Preview.app",
-        "serviceInputTypeIdentifier": "com.apple.Automator.nothing",
+        "serviceInputTypeIdentifier": "com.apple.Automator.text",
         "serviceOutputTypeIdentifier": "com.apple.Automator.nothing",
         "serviceProcessesInput": 0,
         "workflowTypeIdentifier": "com.apple.Automator.servicesMenu",
@@ -75,13 +77,24 @@ doc = {
 doc_out.write_bytes(plistlib.dumps(doc, fmt=plistlib.FMT_XML))
 
 info = {
+    "CFBundleDevelopmentRegion": "zh_CN",
+    "CFBundleIdentifier": "io.github.khlann.yulan.copyPreviewPage",
+    "CFBundleName": "YulanCopyPreviewPage",
+    "CFBundlePackageType": "BNDL",
+    "CFBundleShortVersionString": "1.0",
     "NSServices": [
         {
             "NSMenuItem": {"default": "页览：复制当前页为 PNG"},
             "NSMessage": "runWorkflowAsService",
             "NSRequiredContext": {"NSApplicationIdentifier": "com.apple.Preview"},
+            "NSSendTypes": [
+                "public.utf8-plain-text",
+                "public.plain-text",
+                "NSStringPboardType",
+                "NSPDFPboardType",
+            ],
         }
-    ]
+    ],
 }
 info_out.write_bytes(plistlib.dumps(info, fmt=plistlib.FMT_XML))
 PY
@@ -89,12 +102,19 @@ PY
 plutil -lint "$DOC_OUT" >/dev/null
 plutil -lint "$INFO_OUT" >/dev/null
 
-# 刷新服务注册（不同系统版本行为略有差异）
-if killall pbs 2>/dev/null; then
-  :
-fi
+# 刷新 Pasteboard 服务注册
+killall pbs 2>/dev/null || true
+launchctl kickstart -k "gui/$(id -u)/com.apple.pbs" 2>/dev/null || true
 
 echo ""
 echo "已安装: ${DEST}"
-echo "请在「系统设置 → 键盘 → 键盘快捷键 → 服务（或快速操作）」中勾选「页览：复制当前页为 PNG」。"
-echo "若右键菜单里暂时看不到，可注销重新登录一次，或用「自动操作」打开该工作流再关闭以触发注册。"
+echo ""
+echo "请到以下位置勾选启用（不同 macOS 版本入口不同，都找一下）："
+echo "  • 系统设置 → 键盘 → 键盘快捷键 → 服务"
+echo "  • 系统设置 → 键盘 → 键盘快捷键 → 快速操作"
+echo "  • 系统设置 → 隐私与安全性 → 扩展 → 快速操作（部分版本）"
+echo ""
+echo "在「预览」里：本服务按「文本类」注册，请先划选少量文字再右键 → 服务 →「页览：复制当前页为 PNG」。"
+echo "（脚本仍按前台预览窗口导出整页，与选中文字内容无关。）"
+echo ""
+echo "若仍没有：完全退出并重新打开「预览」，或注销一次。"
