@@ -32,7 +32,7 @@ enum Main {
         let pixelW = max(1, Int(ceil(mediaBox.width * scale)))
         let pixelH = max(1, Int(ceil(mediaBox.height * scale)))
 
-        guard let cgImage = renderPage(page, pixelWidth: pixelW, pixelHeight: pixelH, scale: scale) else {
+        guard let cgImage = renderPage(page, pixelWidth: pixelW, pixelHeight: pixelH) else {
             fputs("error: render failed\n", stderr)
             exit(1)
         }
@@ -166,7 +166,7 @@ enum Main {
         return pngOk
     }
 
-    private static func renderPage(_ page: PDFPage, pixelWidth: Int, pixelHeight: Int, scale: CGFloat) -> CGImage? {
+    private static func renderPage(_ page: PDFPage, pixelWidth: Int, pixelHeight: Int) -> CGImage? {
         let mediaBox = page.bounds(for: .mediaBox)
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
         let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
@@ -181,11 +181,15 @@ enum Main {
         ) else { return nil }
 
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-        ctx.fill(CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+        ctx.fill(CGRect(x: 0, y: 0, width: CGFloat(pixelWidth), height: CGFloat(pixelHeight)))
 
-        ctx.scaleBy(x: scale, y: scale)
-        ctx.translateBy(x: 0, y: mediaBox.height)
+        // PDF origin is bottom-left; bitmap is top-left. Use device-space flip then fit media box.
+        let sx = CGFloat(pixelWidth) / mediaBox.width
+        let sy = CGFloat(pixelHeight) / mediaBox.height
+        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
         ctx.scaleBy(x: 1, y: -1)
+        ctx.scaleBy(x: sx, y: sy)
+        ctx.translateBy(x: -mediaBox.origin.x, y: -mediaBox.origin.y)
 
         page.draw(with: .mediaBox, to: ctx)
         return ctx.makeImage()

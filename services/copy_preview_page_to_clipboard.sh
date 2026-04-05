@@ -21,8 +21,10 @@ TOOL="$(resolve_tool)" || {
 PDFPATH="$(osascript -l JavaScript <<'JXA' 2>/dev/null
 function run() {
   var p = Application('Preview');
-  if (p.documents.length < 1) { throw new Error('no document'); }
-  return p.documents[0].path();
+  if (p.windows.length < 1) { throw new Error('no window'); }
+  var d = p.windows[0].document();
+  if (!d) { throw new Error('no document'); }
+  return d.path();
 }
 JXA
 )" || true

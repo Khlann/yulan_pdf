@@ -33,26 +33,53 @@ local function previewFrontDocumentPathJXA()
   local js = [[
 function run() {
   var p = Application('Preview');
-  if (p.documents.length < 1) { throw new Error('no document'); }
-  return p.documents[0].path();
+  if (p.windows.length < 1) { throw new Error('no window'); }
+  var d = p.windows[0].document();
+  if (!d) { throw new Error('no document'); }
+  return d.path();
 }
 ]]
   return hs.osascript.javascript(js)
 end
 
-local function parsePageFromText(s)
-  if type(s) ~= "string" or s == "" then
+-- 只信任「当前页/总页数」类文案，避免侧栏缩略图上的「1」「第1页」先被 DFS 命中。
+local function parsePageIndicatorStrict(s)
+  if type(s) ~= "string" then
+    return nil
+  end
+  local t = s:match("^%s*(.-)%s*$")
+  if not t or t == "" then
     return nil
   end
   local n =
-    s:match("第%s*(%d+)%s*页")
-    or s:match("Page%s+(%d+)%s+of")
-    or s:match("(%d+)%s+of%s+%d+")
-    or s:match("^%s*(%d+)%s*/%s*%d+%s*$")
+    t:match("^%s*(%d+)%s*[/／]%s*%d+%s*$")
+    or t:match("^%s*(%d+)%s*-%s*%d+%s*$")
+    or t:match("^%s*(%d+)%s*–%s*%d+%s*$")
+    or t:match("^%s*(%d+)%s*—%s*%d+%s*$")
+    or t:lower():match("^%s*page%s+(%d+)%s+of%s+%d+%s*$")
+    or t:match("^%s*(%d+)%s+of%s+%d+%s*$")
   return n and tonumber(n) or nil
 end
 
-local function collectAxStrings(el, depth, maxDepth, budget)
+local function axElementFrameLeft(el)
+  local f = el:attributeValue("AXFrame")
+  if type(f) == "table" then
+    return f.x or f.x1 or 0
+  end
+  return 0
+end
+
+local function axElementFrameArea(el)
+  local f = el:attributeValue("AXFrame")
+  if type(f) == "table" then
+    local w = f.w or f.width or 0
+    local h = f.h or f.height or 0
+    return math.abs(w * h)
+  end
+  return math.huge
+end
+
+local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
   if depth > maxDepth or budget.count <= 0 then
     return
   end
@@ -61,25 +88,21 @@ local function collectAxStrings(el, depth, maxDepth, budget)
   for _, key in ipairs(fields) do
     local v = el:attributeValue(key)
     if type(v) == "string" and #v > 0 then
-      local pg = parsePageFromText(v)
+      local pg = parsePageIndicatorStrict(v)
       if pg then
-        return pg
+        out[#out + 1] = { page = pg, x = axElementFrameLeft(el), area = axElementFrameArea(el) }
       end
     end
   end
   local kids = el:attributeValue("AXChildren")
   if type(kids) == "table" then
     for i = 1, math.min(#kids, 80) do
-      local pg = collectAxStrings(kids[i], depth + 1, maxDepth, budget)
-      if pg then
-        return pg
-      end
+      gatherPageIndicatorCandidates(kids[i], depth + 1, maxDepth, budget, out)
     end
   end
-  return nil
 end
 
--- 从预览窗口无障碍树猜当前页（需为 Hammerspoon 打开「辅助功能」）
+-- 从预览窗口无障碍树猜当前页：多候选时优先最靠右（工具栏「n / m」通常在右上）
 local function previewCurrentPageFromAX(win)
   if not win then
     return nil
@@ -90,7 +113,18 @@ local function previewCurrentPageFromAX(win)
   if not ok or not axWin then
     return nil
   end
-  return collectAxStrings(axWin, 0, 28, { count = 4000 })
+  local cands = {}
+  gatherPageIndicatorCandidates(axWin, 0, 28, { count = 4000 }, cands)
+  if #cands == 0 then
+    return nil
+  end
+  table.sort(cands, function(a, b)
+    if a.x ~= b.x then
+      return a.x > b.x
+    end
+    return a.area < b.area
+  end)
+  return cands[1].page
 end
 
 local function runCopyPageToClipboard(bin, path, page)
