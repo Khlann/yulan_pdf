@@ -86,41 +86,37 @@ local function extractPageFromTitleLikeString(t)
   return n and tonumber(n) or nil
 end
 
--- 合并 hs.window:title() 与 AX 窗口的 AXTitle（有时前者不含「页码：」后缀）
+-- 从标题栏解析页码：优先 AXTitle（常含「页码：n/m」），再 hs.window:title()（快捷键后有时被截断）
 local function previewPageFromWindowTitle(win)
   if not win then
     return nil
   end
-  local tried = {}
-  local function try(s)
-    if type(s) ~= "string" or s == "" then
-      return nil
-    end
-    if tried[s] then
-      return nil
-    end
-    tried[s] = true
-    return extractPageFromTitleLikeString(s)
-  end
-  local n = try(win:title())
-  if n then
-    return n
-  end
+  local strings = {}
   local ok, axw = pcall(function()
     return hs.axuielement.windowElement(win)
   end)
   if ok and axw then
     for _, key in ipairs({ "AXTitle", "AXDocument" }) do
       local v = axw:attributeValue(key)
-      n = try(v)
-      if n then
-        return n
+      if type(v) == "string" and #v > 0 then
+        strings[#strings + 1] = v
       end
     end
     local a = axw:attributeValue("AXTitle")
     local b = axw:attributeValue("AXDocument")
     if type(a) == "string" or type(b) == "string" then
-      n = extractPageFromTitleLikeString(table.concat({ a or "", b or "" }, " "))
+      strings[#strings + 1] = table.concat({ a or "", b or "" }, " ")
+    end
+  end
+  local wt = win:title()
+  if type(wt) == "string" and #wt > 0 then
+    strings[#strings + 1] = wt
+  end
+  local seen = {}
+  for _, s in ipairs(strings) do
+    if not seen[s] then
+      seen[s] = true
+      local n = extractPageFromTitleLikeString(s)
       if n then
         return n
       end
@@ -322,6 +318,10 @@ local function exportPreviewPage()
     return
   end
 
+  -- 先取窗口与页码，再跑 JXA：避免 Apple 事件先执行后标题栏/焦点变化，导致 title 与控制台不一致
+  local win = previewAppWindowForAX()
+  local page = previewPageFromWindowTitle(win) or previewCurrentPageFromAX(win)
+
   local okPath, pathOut = previewFrontDocumentPathJXA()
   if not okPath then
     hs.alert.show(
@@ -338,9 +338,6 @@ local function exportPreviewPage()
     hs.alert.show("未取得 PDF 路径（请先保存文件）", 3)
     return
   end
-
-  local win = previewAppWindowForAX()
-  local page = previewPageFromWindowTitle(win) or previewCurrentPageFromAX(win)
 
   if not page then
     local btn, text = hs.dialog.textPrompt(
