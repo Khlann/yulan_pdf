@@ -71,21 +71,62 @@ local function parsePageNumberFromAXString(s)
   return nil, false
 end
 
--- 预览窗口标题含「… — 页码：26/111」，比 AX 里幻灯片页脚的「2 / 111」可靠，必须优先解析
-local function previewPageFromWindowTitle(win)
-  if not win then
-    return nil
-  end
-  local t = win:title()
+-- 从标题栏文案解析页码（与你在控制台用的 prev + window + ax 同源信息）
+local function extractPageFromTitleLikeString(t)
   if type(t) ~= "string" or t == "" then
     return nil
   end
+  local tl = t:lower()
   local n =
     t:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
     or t:match("[页頁]%s*[码碼]%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
     or t:match("页码%s*(%d+)%s*[/／]%s*%d+")
-    or t:lower():match("page%s+(%d+)%s+of%s+%d+")
+    or tl:match("page%s+(%d+)%s+of%s+%d+")
+    or tl:match("[–—%-]%s*page%s+(%d+)%s+of%s+%d+")
   return n and tonumber(n) or nil
+end
+
+-- 合并 hs.window:title() 与 AX 窗口的 AXTitle（有时前者不含「页码：」后缀）
+local function previewPageFromWindowTitle(win)
+  if not win then
+    return nil
+  end
+  local tried = {}
+  local function try(s)
+    if type(s) ~= "string" or s == "" then
+      return nil
+    end
+    if tried[s] then
+      return nil
+    end
+    tried[s] = true
+    return extractPageFromTitleLikeString(s)
+  end
+  local n = try(win:title())
+  if n then
+    return n
+  end
+  local ok, axw = pcall(function()
+    return hs.axuielement.windowElement(win)
+  end)
+  if ok and axw then
+    for _, key in ipairs({ "AXTitle", "AXDocument" }) do
+      local v = axw:attributeValue(key)
+      n = try(v)
+      if n then
+        return n
+      end
+    end
+    local a = axw:attributeValue("AXTitle")
+    local b = axw:attributeValue("AXDocument")
+    if type(a) == "string" or type(b) == "string" then
+      n = extractPageFromTitleLikeString(table.concat({ a or "", b or "" }, " "))
+      if n then
+        return n
+      end
+    end
+  end
+  return nil
 end
 
 -- 始终用「预览」进程的窗口做 AX（不要用全局 focusedWindow：在 Hammerspoon 控制台里焦点是控制台）
@@ -212,9 +253,7 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
   end
 end
 
--- 从预览窗口无障碍树猜当前页：
--- - 含「页码：n/m」的控件（常见在左上角）优先，且其中取 x 最小（最靠左）
--- - 否则退回英文「n / m」等，取 x 最大（右上）
+-- 从预览窗口无障碍树猜当前页（仅保留带「页码」语义的命中，忽略幻灯片里的「2 / 73」页脚）
 local function previewCurrentPageFromAX(win)
   if not win then
     return nil
@@ -227,9 +266,16 @@ local function previewCurrentPageFromAX(win)
   end
   local cands = {}
   gatherPageIndicatorCandidates(axWin, 0, 30, { count = 9000 }, cands)
-  if #cands == 0 then
+  local filtered = {}
+  for _, c in ipairs(cands) do
+    if c.labeled then
+      filtered[#filtered + 1] = c
+    end
+  end
+  if #filtered == 0 then
     return nil
   end
+  cands = filtered
   table.sort(cands, function(a, b)
     if a.labeled ~= b.labeled then
       return a.labeled
