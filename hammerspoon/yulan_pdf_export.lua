@@ -42,12 +42,15 @@ function run() {
   return hs.osascript.javascript(js)
 end
 
--- 解析页码；第二返回值为 true 表示来自「页码：n/m」类控件（预览左上角中文工具栏）
+-- 解析页码；labeled=true 表示「页码：n/m」类（预览标题栏左侧常拆成多个 AX 子结点，需拼接）
 local function parsePageNumberFromAXString(s)
   if type(s) ~= "string" or s == "" then
     return nil, false
   end
-  local n = s:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+  local n =
+    s:match("页码%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+    or s:match("[页頁]%s*[码碼]%s*[:：]%s*(%d+)%s*[/／]%s*%d+")
+    or s:match("页码%s*(%d+)%s*[/／]%s*%d+")
   if n then
     return tonumber(n), true
   end
@@ -66,6 +69,45 @@ local function parsePageNumberFromAXString(s)
     return tonumber(n), false
   end
   return nil, false
+end
+
+local function axFirstStringField(el)
+  if not el then
+    return nil
+  end
+  for _, key in ipairs({ "AXValue", "AXTitle", "AXDescription" }) do
+    local v = el:attributeValue(key)
+    if type(v) == "string" and #v > 0 then
+      return v
+    end
+  end
+  return nil
+end
+
+-- 把子树里可见字符串按遍历顺序拼起来（用于「页码」「：」「25/111」分散在多个 AXStaticText 的情况）
+local function axConcatDescendantStrings(el, maxDepth, budget)
+  if budget.count <= 0 then
+    return ""
+  end
+  budget.count = budget.count - 1
+  local chunks = {}
+  local s = axFirstStringField(el)
+  if s then
+    chunks[#chunks + 1] = s
+  end
+  if maxDepth <= 0 then
+    return table.concat(chunks, "")
+  end
+  local kids = el:attributeValue("AXChildren")
+  if type(kids) == "table" then
+    for i = 1, math.min(#kids, 40) do
+      local sub = axConcatDescendantStrings(kids[i], maxDepth - 1, budget)
+      if #sub > 0 then
+        chunks[#chunks + 1] = sub
+      end
+    end
+  end
+  return table.concat(chunks, "")
 end
 
 local function axElementFrameLeft(el)
@@ -107,6 +149,28 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
     end
   end
   local kids = el:attributeValue("AXChildren")
+  if type(kids) == "table" and #kids >= 1 and #kids <= 40 and depth <= 18 and budget.count > 80 then
+    local glueBudget = { count = 120 }
+    local glued = axConcatDescendantStrings(el, 4, glueBudget)
+    if
+      #glued >= 3
+      and (
+        glued:find("页码", 1, true)
+        or glued:find("頁碼", 1, true)
+        or (glued:find("页", 1, true) and glued:find("码", 1, true))
+      )
+    then
+      local pg, labeled = parsePageNumberFromAXString(glued)
+      if pg and labeled then
+        out[#out + 1] = {
+          page = pg,
+          x = axElementFrameLeft(el),
+          area = axElementFrameArea(el),
+          labeled = true,
+        }
+      end
+    end
+  end
   if type(kids) == "table" then
     for i = 1, math.min(#kids, 80) do
       gatherPageIndicatorCandidates(kids[i], depth + 1, maxDepth, budget, out)
@@ -128,7 +192,7 @@ local function previewCurrentPageFromAX(win)
     return nil
   end
   local cands = {}
-  gatherPageIndicatorCandidates(axWin, 0, 28, { count = 4000 }, cands)
+  gatherPageIndicatorCandidates(axWin, 0, 30, { count = 9000 }, cands)
   if #cands == 0 then
     return nil
   end
