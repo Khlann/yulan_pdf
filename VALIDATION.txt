@@ -27,7 +27,11 @@ Plan to-dos: local validation notes (yulan_pdf)
 4) Export backend (backend-cli)
 - pdfpageexport: Swift PDFKit CLI. Example:
     .build/release/pdfpageexport --pdf file.pdf --page 1 --dpi 144 --out page1.png
+    .build/release/pdfpageexport --pdf file.pdf --page 1 --dpi 144 --clipboard
   JPEG: use .jpg and optional --jpeg-quality 0.85
+
+5) Right-click style menu (Services / Quick Actions)
+- See services/README.txt and services/copy_preview_page_to_clipboard.sh (Automator Quick Action). Preview has no public API for a custom item on the canvas menu; Services/Quick Actions is the supported approximation.
 
 Build: swift build -c release
 Binaries: .build/release/pdfpageexport, .build/release/preview_ax_dump

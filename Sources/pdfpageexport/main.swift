@@ -37,7 +37,21 @@ enum Main {
             exit(1)
         }
 
-        let outURL = URL(fileURLWithPath: opts.outputPath)
+        if opts.toClipboard {
+            guard copyPNGToPasteboard(cgImage: cgImage) else {
+                fputs("error: clipboard write failed\n", stderr)
+                exit(1)
+            }
+            print("ok: copied PNG to pasteboard (\(pixelW)×\(pixelH))")
+            return
+        }
+
+        guard let outPath = opts.outputPath else {
+            fputs("error: missing --out (or use --clipboard)\n", stderr)
+            exit(64)
+        }
+
+        let outURL = URL(fileURLWithPath: outPath)
         let ext = outURL.pathExtension.lowercased()
         let utType: UTType = switch ext {
         case "jpg", "jpeg": .jpeg
@@ -46,7 +60,7 @@ enum Main {
         }
 
         guard let dest = CGImageDestinationCreateWithURL(outURL as CFURL, utType.identifier as CFString, 1, nil) else {
-            fputs("error: cannot create image at \(opts.outputPath)\n", stderr)
+            fputs("error: cannot create image at \(outPath)\n", stderr)
             exit(1)
         }
 
@@ -64,9 +78,11 @@ enum Main {
 
     private static func printUsage() {
         let msg = """
-        usage: pdfpageexport --pdf <path> --page <1-based> --dpi <number> --out <path.png|jpg|tiff> [--jpeg-quality 0…1]
+        usage:
+          pdfpageexport --pdf <path> --page <1-based> --dpi <number> --out <path.png|jpg|tiff> [--jpeg-quality 0…1]
+          pdfpageexport --pdf <path> --page <1-based> --dpi <number> --clipboard
 
-        Rasterizes one PDF page with PDFKit (vector → bitmap at given DPI).
+        Rasterizes one PDF page with PDFKit. Use --clipboard to put PNG on the general pasteboard.
         """
         fputs("\(msg)\n", stderr)
     }
@@ -75,7 +91,8 @@ enum Main {
         var pdfPath: String
         var page1Based: Int
         var dpi: CGFloat
-        var outputPath: String
+        var outputPath: String?
+        var toClipboard: Bool
         var jpegQuality: CGFloat = 0.92
     }
 
@@ -84,6 +101,7 @@ enum Main {
         var page: Int?
         var dpi: CGFloat?
         var out: String?
+        var toClipboard = false
         var jpegQ: CGFloat = 0.92
 
         var i = args.startIndex
@@ -106,6 +124,9 @@ enum Main {
                 guard i + 1 < args.endIndex else { return nil }
                 out = args[args.index(after: i)]
                 i = args.index(i, offsetBy: 2)
+            case "--clipboard":
+                toClipboard = true
+                i = args.index(after: i)
             case "--jpeg-quality":
                 guard i + 1 < args.endIndex, let q = Double(args[args.index(after: i)]), (0 ... 1).contains(q) else {
                     return nil
@@ -117,8 +138,32 @@ enum Main {
             }
         }
 
-        guard let pdfPath, let page, let dpi, let out else { return nil }
-        return Options(pdfPath: pdfPath, page1Based: page, dpi: dpi, outputPath: out, jpegQuality: jpegQ)
+        guard let pdfPath, let page, let dpi else { return nil }
+        if toClipboard {
+            return Options(pdfPath: pdfPath, page1Based: page, dpi: dpi, outputPath: nil, toClipboard: true, jpegQuality: jpegQ)
+        }
+        guard let out else { return nil }
+        return Options(pdfPath: pdfPath, page1Based: page, dpi: dpi, outputPath: out, toClipboard: false, jpegQuality: jpegQ)
+    }
+
+    private static func copyPNGToPasteboard(cgImage: CGImage) -> Bool {
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil) else {
+            return false
+        }
+        CGImageDestinationAddImage(dest, cgImage, nil)
+        guard CGImageDestinationFinalize(dest) else { return false }
+
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        let pngOk = pb.setData(data as Data, forType: .png)
+
+        let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        if let tiff = nsImage.tiffRepresentation {
+            _ = pb.setData(tiff, forType: .tiff)
+        }
+
+        return pngOk
     }
 
     private static func renderPage(_ page: PDFPage, pixelWidth: Int, pixelHeight: Int, scale: CGFloat) -> CGImage? {
