@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- **Services**：`copy_preview_page_to_clipboard.sh` 通过 JXA 读取窗口标题，与 `parse_preview_title.py` 自动解析页码（与 Hammerspoon 规则一致）；无法解析时再弹窗输入。
+
 ## [0.1.0] — 2026-04-05
 
 首次发版。
