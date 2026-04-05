@@ -71,6 +71,27 @@ local function parsePageNumberFromAXString(s)
   return nil, false
 end
 
+-- 始终用「预览」进程的窗口做 AX（不要用全局 focusedWindow：在 Hammerspoon 控制台里焦点是控制台）
+local function previewAppWindowForAX()
+  local prev = hs.application.get("com.apple.Preview")
+  if not prev then
+    return nil
+  end
+  return prev:focusedWindow() or prev:mainWindow() or (prev:allWindows() or {})[1]
+end
+
+local function axChildrenArray(el)
+  local kids = el:attributeValue("AXChildren")
+  if type(kids) ~= "table" then
+    return {}
+  end
+  local out = {}
+  for i = 1, #kids do
+    out[#out + 1] = kids[i]
+  end
+  return out
+end
+
 local function axFirstStringField(el)
   if not el then
     return nil
@@ -98,13 +119,11 @@ local function axConcatDescendantStrings(el, maxDepth, budget)
   if maxDepth <= 0 then
     return table.concat(chunks, "")
   end
-  local kids = el:attributeValue("AXChildren")
-  if type(kids) == "table" then
-    for i = 1, math.min(#kids, 40) do
-      local sub = axConcatDescendantStrings(kids[i], maxDepth - 1, budget)
-      if #sub > 0 then
-        chunks[#chunks + 1] = sub
-      end
+  local kids = axChildrenArray(el)
+  for i = 1, math.min(#kids, 40) do
+    local sub = axConcatDescendantStrings(kids[i], maxDepth - 1, budget)
+    if #sub > 0 then
+      chunks[#chunks + 1] = sub
     end
   end
   return table.concat(chunks, "")
@@ -148,8 +167,8 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
       end
     end
   end
-  local kids = el:attributeValue("AXChildren")
-  if type(kids) == "table" and #kids >= 1 and #kids <= 40 and depth <= 18 and budget.count > 80 then
+  local kids = axChildrenArray(el)
+  if #kids >= 1 and #kids <= 40 and depth <= 18 and budget.count > 80 then
     local glueBudget = { count = 120 }
     local glued = axConcatDescendantStrings(el, 4, glueBudget)
     if
@@ -171,10 +190,8 @@ local function gatherPageIndicatorCandidates(el, depth, maxDepth, budget, out)
       end
     end
   end
-  if type(kids) == "table" then
-    for i = 1, math.min(#kids, 80) do
-      gatherPageIndicatorCandidates(kids[i], depth + 1, maxDepth, budget, out)
-    end
+  for i = 1, math.min(#kids, 80) do
+    gatherPageIndicatorCandidates(kids[i], depth + 1, maxDepth, budget, out)
   end
 end
 
@@ -259,8 +276,7 @@ local function exportPreviewPage()
     return
   end
 
-  local app = hs.application.frontmostApplication()
-  local win = app and app:focusedWindow()
+  local win = previewAppWindowForAX()
   local page = previewCurrentPageFromAX(win)
 
   if not page then

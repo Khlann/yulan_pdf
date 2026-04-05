@@ -22,6 +22,7 @@ Plan to-dos: local validation notes (yulan_pdf)
 - Config file: hammerspoon/yulan_pdf_export.lua — ⌃⌥⌘E while Preview is front.
 - If Hammerspoon does not appear under System Settings > Privacy > Automation: press ⌃⌥⌘R once (registers the app with TCC). Keep Hammerspoon in /Applications, not running from the disk image.
 - Chinese macOS: AppleScript cannot compile English phrases like "current page" (-2741). The Hammerspoon config uses JXA for the file path and Accessibility (AX) or a dialog for the page number; enable Accessibility for Hammerspoon if you want auto page detection.
+- Debug AX from Hammerspoon Console: do NOT use hs.window.focusedWindow() (focus is the console). Use: local w = hs.application.get("com.apple.Preview"):focusedWindow() or hs.application.get("com.apple.Preview"):mainWindow(); hs.axuielement.windowElement(w)
 - Manual CLI install only: zsh scripts/install-cli.sh
 
 4) Export backend (backend-cli)
