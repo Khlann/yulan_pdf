@@ -26,6 +26,7 @@ INFO_OUT="${DEST}/Contents/Info.plist"
 
 /usr/bin/python3 - "$SH_PATH" "$DOC_OUT" "$INFO_OUT" "$REPO_ROOT" <<'PY'
 import plistlib
+import shlex
 import sys
 import uuid
 from pathlib import Path
@@ -48,7 +49,20 @@ inner["UUID"] = uid()
 inner["InputUUID"] = uid()
 inner["OutputUUID"] = uid()
 
-cmd = str(shell_script_path) + "\n"
+# 预览里选区常为 RTF/属性串，默认 Run Shell 只接受 com.apple.cocoa.string →「服务输入出现问题」
+inner["AMAccepts"] = {
+    "Container": "List",
+    "Optional": True,
+    "Types": ["*"],
+}
+inner["AMProvides"] = {
+    "Container": "List",
+    "Types": ["*"],
+}
+
+qpath = shlex.quote(str(shell_script_path))
+# 丢弃 Automator 经 stdin 传入的选区；导出逻辑不依赖选中文本
+cmd = f"cat >/dev/null 2>&1 || true\nexec {qpath}\n"
 inner["ActionParameters"] = {
     "COMMAND_STRING": cmd,
     "CheckedForUserDefaultShell": False,
@@ -81,7 +95,7 @@ info = {
     "CFBundleIdentifier": "io.github.khlann.yulan.copyPreviewPage",
     "CFBundleName": "YulanCopyPreviewPage",
     "CFBundlePackageType": "BNDL",
-    "CFBundleShortVersionString": "1.0",
+    "CFBundleShortVersionString": "1.0.1",
     "NSServices": [
         {
             "NSMenuItem": {"default": "页览：复制当前页为 PNG"},
@@ -90,7 +104,9 @@ info = {
             "NSSendTypes": [
                 "public.utf8-plain-text",
                 "public.plain-text",
+                "public.rtf",
                 "NSStringPboardType",
+                "NSRTFPboardType",
                 "NSPDFPboardType",
             ],
         }
